@@ -1,0 +1,6 @@
+---
+applications:
+- name:    apstarter
+  host:    apstarter
+  memory:  256M
+  services:
