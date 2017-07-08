@@ -1,5 +1,7 @@
 ---
 applications:
-- name:    ew2
-  host:    ew2
+- name:    ew
+  host:    ew
   memory:  64M
+  services:
+    - ewalletapi-db

@@ -12,22 +12,11 @@ var config = require('config');
 
 chai.use(chaiHttp);
 
-describe('GET /apis/v1/pass?team=collingwood', function () {
-  it('it should return something', function (done) {
-    chai.request(server)
-      .get('/apis/v1/pass?team=collingwood')
-      .end(function (err, res) {
-        res.should.have.status(200);
-        res.body.should.be.a('object');
-        res.body.should.have.property('response');
+var newDocId;
+var newRevId;
 
-        done();
-      });
-  });
-});
-
-describe("POST /apis/v1/passupload", () => {
-  it("should POST a pkpass file", (done) => {
+describe("PASS API tests", () => {
+  it("should upload a pkpass file", (done) => {
     chai.request(server)
       .post('/apis/v1/passupload')
       .set('Content-Type', 'application/vnd.apple.pkpass')
@@ -38,7 +27,113 @@ describe("POST /apis/v1/passupload", () => {
         res.body.should.be.a('object');
         res.body.should.have.property('id');
 
+        newDocId = res.body.id;
+
         done();
       });
-  })
-})
+  });
+
+  it("should NOT upload a file without a pkpass extension", (done) => {
+    chai.request(server)
+      .post('/apis/v1/passupload')
+      .set('Content-Type', 'application/vnd.apple.pkpass')
+      .field("custid", "12345")
+      .attach('filetoupload', './test/testpass.pkpass', 'testpass.zip')
+      .end((err, res) => {
+        res.should.have.status(400);
+
+        done();
+      });
+  });
+
+  it("should NOT upload a file without a pass.json file", (done) => {
+    chai.request(server)
+      .post('/apis/v1/passupload')
+      .set('Content-Type', 'application/vnd.apple.pkpass')
+      .field("custid", "12345")
+      .attach('filetoupload', './test/passwithoutpassjson.pkpass', 'passwithoutpassjson.pkpass')
+      .end((err, res) => {
+        res.should.have.status(400);
+        done();
+      });
+  });
+
+  it("should NOT upload a file without a manifest.json file", (done) => {
+    chai.request(server)
+      .post('/apis/v1/passupload')
+      .set('Content-Type', 'application/vnd.apple.pkpass')
+      .field("custid", "12345")
+      .attach('filetoupload', './test/passwithoutmanifest.pkpass', 'passwithoutmanifest.pkpass')
+      .end((err, res) => {
+        res.should.have.status(400);
+        done();
+      });
+  });
+
+  it("should NOT upload a file without a signature file", (done) => {
+    chai.request(server)
+      .post('/apis/v1/passupload')
+      .set('Content-Type', 'application/vnd.apple.pkpass')
+      .field("custid", "12345")
+      .attach('filetoupload', './test/passwithoutsignature.pkpass', 'passwithoutsignature.pkpass')
+      .end((err, res) => {
+        res.should.have.status(400);
+        done();
+      });
+  });
+
+  it("should NOT upload a file without a custid", (done) => {
+    chai.request(server)
+      .post('/apis/v1/passupload')
+      .set('Content-Type', 'application/vnd.apple.pkpass')
+      .attach('filetoupload', './test/testpass.pkpass', 'testpass.pkpass')
+      .end((err, res) => {
+        res.should.have.status(400);
+        done();
+      });
+  });
+
+  it('it should return a pass document', function (done) {
+    chai.request(server)
+      .get('/apis/v1/pass/' + newDocId)
+      .end(function (err, res) {
+        res.should.have.status(200);
+        res.body.should.be.a('object');
+        res.body.should.have.property('_id');
+        newRevId = res.body._rev;
+
+        done();
+      });
+  });
+
+  it('it should delete a pass document', function (done) {
+    chai.request(server)
+      .delete('/apis/v1/pass/' + newDocId + '?rev=' + newRevId)
+      .end(function (err, res) {
+        res.should.have.status(200);
+
+        done();
+      });
+  });
+
+it('it should NOT return a pass document', function (done) {
+    chai.request(server)
+      .get('/apis/v1/pass/' + newDocId)
+      .end(function (err, res) {
+        res.should.have.status(404);
+
+        done();
+      });
+  });
+
+  it('it should NOT delete a pass document', function (done) {
+    chai.request(server)
+      .delete('/apis/v1/pass/' + newDocId + '?rev=' + newRevId)
+      .end(function (err, res) {
+        res.should.have.status(404);
+
+        done();
+      });
+  });
+
+});

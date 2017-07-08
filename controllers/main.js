@@ -19,30 +19,66 @@ module.exports = function (app) {
                 if (err)
                     throw err;
 
-                var doc = {};
-                doc.fields = fields;
-
-                // TODO validate we have a custid in fields
-                // TODO validate we have a pkpass file
-
+                var validRequest = true;
                 var dirPath = os.tmpdir() + path.sep;
                 var dir = fs.mkdtempSync(dirPath);
-                doc.fileName = files.filetoupload.name;
-                doc.fileUploadDir = files.filetoupload.path;
-                doc.uncompressDir = dir;
+                var doc = {
+                    fileName: files.filetoupload.name,
+                    fileUploadDir: files.filetoupload.path,
+                    uncompressDir: dir,
+                    fields: fields
+                };
 
-                decompress(files.filetoupload.path, dir).then(filesed => {
-                    doc.files = filesed;
+                // check for custid in payload
+                if (!doc.fields || !doc.fields.custid) {
+                    validRequest = false;
+                }
 
-                    app.locals.db.insert(doc, '', function (err, newDoc) {
-                        if (err) {
-                            console.log(err);
-                            response.sendStatus(500);
-                        } else {
-                            response.json({'id': newDoc.id});
+                // check for pkpass extension
+                if (validRequest && !doc.fileName.endsWith('.pkpass')) {
+                    validRequest = false;
+                }
+
+                if (validRequest) {
+                    decompress(files.filetoupload.path, dir).then(filesed => {
+                        doc.files = filesed;
+                        if (doc.files) {
+                            // look for the pass.json file
+                            for (var i = 0; i < doc.files.length; i++) {
+                                if (doc.files[i].path === "pass.json") {
+                                    doc.pass = JSON.parse(doc.files[i].data.toString());
+                                }
+                                if (doc.files[i].path === "manifest.json") {
+                                    doc.manifest = JSON.parse(doc.files[i].data.toString());
+                                }
+                                if (doc.files[i].path === "signature") {
+                                    doc.signature = true;
+                                }
+                            }
+                        }
+
+                        validRequest = doc.pass && doc.manifest && doc.signature;
+                        if (validRequest) {
+                            app.locals.db.insert(doc, '', function (err, newDoc) {
+                                if (err) {
+                                    console.log(err);
+                                    response.sendStatus(500);
+                                } else {
+                                    if (process.env.NODE_ENV === 'test')
+                                        response.json(newDoc);
+                                    else
+                                        response.json({ 'id': newDoc.id });
+                                }
+                            });
+                        }
+                        if (!validRequest) {
+                            response.sendStatus(400);
                         }
                     });
-                });
+                }
+                if (!validRequest) {
+                    response.sendStatus(400);
+                }
             });
         } catch (err) {
             console.error("EXCEPTION\n" + JSON.stringify(err));
@@ -50,24 +86,41 @@ module.exports = function (app) {
         }
     });
 
-    app.get('/apis/v1/pass', function (request, response) {
+    app.get('/apis/v1/pass/:passId', function (request, response) {
 
         try {
-            // request.checkParams('team', 'Missing Team').notEmpty();
+            var id = request.params.passId;
+            if (!id) {
+                response.sendStatus(400);
+            } else {
+                app.locals.db.get(id, {}, function (err, doc) {
+                    if (err)
+                        response.sendStatus(404);
+                    else
+                        response.json(doc);
+                });
+            }
+        } catch (err) {
+            console.error("EXCEPTION\n" + JSON.stringify(err));
+            response.sendStatus(500);
+        }
+    });
 
-            request.getValidationResult().then(function (result) {
-                if (!result.isEmpty()) {
-                    console.error("Validation ERROR: " + JSON.stringify(result.array()));
-                    response.sendStatus(400);
-                } else {
-                    var team = request.query.team;
-                    if (!team) {
-                        response.sendStatus(400);
-                    } else {
-                        response.json({ 'response': '2010' });
-                    }
-                }
-            })
+    app.delete('/apis/v1/pass/:passId', function (request, response) {
+
+        try {
+            var id = request.params.passId;
+            var revId = request.query.rev;
+            if (!id || !revId) {
+                response.sendStatus(400);
+            } else {
+                app.locals.db.destroy(id, revId, function (err, doc) {
+                    if (err)
+                        response.sendStatus(404);
+                    else
+                        response.sendStatus(200);
+                });
+            }
         } catch (err) {
             console.error("EXCEPTION\n" + JSON.stringify(err));
             response.sendStatus(500);
