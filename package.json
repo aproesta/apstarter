@@ -12,13 +12,14 @@
   "dependencies": {
     "body-parser": "^1.17.1",
     "cfenv": "^1.0.4",
+    "cloudant": "^1.8.0",
     "config": "^1.25.1",
+    "decompress": "^4.2.0",
     "express": "^4.15.2",
     "express-prettify": "0.0.7",
     "express-validator": "^3.1.2",
-    "is-json": "^2.0.1",
-    "decompress": "^4.2.0",
-    "formidable": "^1.1.1"
+    "formidable": "^1.1.1",
+    "is-json": "^2.0.1"
   },
   "devDependencies": {
     "chai": "^3.5.0",

@@ -19,21 +19,31 @@ module.exports = function (app) {
                 if (err)
                     throw err;
 
-                var res = {};
-                res.fields = fields;
+                var doc = {};
+                doc.fields = fields;
+
+                // TODO validate we have a custid in fields
+                // TODO validate we have a pkpass file
 
                 var dirPath = os.tmpdir() + path.sep;
                 var dir = fs.mkdtempSync(dirPath);
-                res.fileName = files.filetoupload.name;
-                res.fileUploadDir = files.filetoupload.path;
-                res.uncompressDir = dir;
+                doc.fileName = files.filetoupload.name;
+                doc.fileUploadDir = files.filetoupload.path;
+                doc.uncompressDir = dir;
 
                 decompress(files.filetoupload.path, dir).then(filesed => {
-                    res.files = filesed;
-                    response.json(res);
+                    doc.files = filesed;
+
+                    app.locals.db.insert(doc, '', function (err, newDoc) {
+                        if (err) {
+                            console.log(err);
+                            response.sendStatus(500);
+                        } else {
+                            response.json({'id': newDoc.id});
+                        }
+                    });
                 });
             });
-
         } catch (err) {
             console.error("EXCEPTION\n" + JSON.stringify(err));
             response.sendStatus(500);

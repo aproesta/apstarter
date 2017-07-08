@@ -7,6 +7,10 @@ var pretty = require('express-prettify');
 
 var bodyParser = require("body-parser");
 var expressValidator = require('express-validator')
+var db = require('./db/db.js');
+
+// Connect to database
+db.initDB(app, "ewalletapi");
 
 // route for static content
 app.use(express.static('public'))
