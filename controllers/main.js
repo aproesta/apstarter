@@ -1,41 +1,63 @@
 "use strict";
 
+const config = require('config');
+const isJSON = require('is-json');
+const fs = require('fs');
+const decompress = require('decompress');
+const formidable = require('formidable');
+const path = require('path');
+var os = require('os');
 
-var config = require('config');
-var isJSON = require('is-json');
 
 module.exports = function (app) {
 
-    app.get('/apis/v1/main', function (request, response) {
-
-        var clientSecret = request.get("CLIENT-SECRET");
+    app.post('/apis/v1/passupload', function (request, response) {
 
         try {
-            if (clientSecret && clientSecret === config.get('clientSecret')) {
+            var form = new formidable.IncomingForm();
+            form.parse(request, function (err, fields, files) {
+                if (err)
+                    throw err;
 
-                // request.checkBody('firstName', 'Invalid firstName').notEmpty();
-                // request.checkBody('lastName', 'Invalid lastName').notEmpty();
+                var res = {};
+                res.fields = fields;
 
+                var dirPath = os.tmpdir() + path.sep;
+                var dir = fs.mkdtempSync(dirPath);
+                res.fileName = files.filetoupload.name;
+                res.fileUploadDir = files.filetoupload.path;
+                res.uncompressDir = dir;
 
-                request.getValidationResult().then(function (result) {
-                    if (!result.isEmpty()) {
-                        console.error("Validation ERROR: " + JSON.stringify(result.array()));
+                decompress(files.filetoupload.path, dir).then(filesed => {
+                    res.files = filesed;
+                    response.json(res);
+                });
+            });
+
+        } catch (err) {
+            console.error("EXCEPTION\n" + JSON.stringify(err));
+            response.sendStatus(500);
+        }
+    });
+
+    app.get('/apis/v1/pass', function (request, response) {
+
+        try {
+            // request.checkParams('team', 'Missing Team').notEmpty();
+
+            request.getValidationResult().then(function (result) {
+                if (!result.isEmpty()) {
+                    console.error("Validation ERROR: " + JSON.stringify(result.array()));
+                    response.sendStatus(400);
+                } else {
+                    var team = request.query.team;
+                    if (!team) {
                         response.sendStatus(400);
                     } else {
-
-                        var reqData = request.body;
-                        if (isJSON.strict(reqData)) {
-                            response.json({ "response": "response" });
-                        } else {
-                            console.error("JSON EXCEPTION\n" + body);
-                            response.sendStatus(500);
-                        }
+                        response.json({ 'response': '2010' });
                     }
-                })
-            }
-            else {
-                response.sendStatus(403);
-            }
+                }
+            })
         } catch (err) {
             console.error("EXCEPTION\n" + JSON.stringify(err));
             response.sendStatus(500);

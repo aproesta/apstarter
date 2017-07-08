@@ -1,7 +1,7 @@
 {
-  "name": "apstarter",
+  "name": "aflserver",
   "version": "1.0.0",
-  "description": "Arthur's nodejs starter",
+  "description": "AFL Server",
   "main": "app.js",
   "scripts": {
     "start": "node server.js",
@@ -16,7 +16,9 @@
     "express": "^4.15.2",
     "express-prettify": "0.0.7",
     "express-validator": "^3.1.2",
-    "is-json": "^2.0.1"
+    "is-json": "^2.0.1",
+    "decompress": "^4.2.0",
+    "formidable": "^1.1.1"
   },
   "devDependencies": {
     "chai": "^3.5.0",
